@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            #menu{
+                padding: 20px;
+            }
+            @media print {
+                #menu {
+                    display: none;
+                }
+                .page {
+                    page-break-after: always;
+                }
+            }
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            #out {
+                display: block;
+                width: 100%;
+            }
+            .card {
+                display: block;
+            }
+            .row {
+                display: flex;
+                width: 100%;    
+                padding: 0 40px;
+                box-sizing: border-box;
+            }
+            .row:not(:first-child) {
+                border-top: 0;
+            }
+            .cell {
+                display: flex;
+                box-sizing: border-box;
+                align-items: center;
+                justify-content: center;
+                border: 1px solid black;
+            }
+            .row:not(:first-child) {
+                border-left: 0;
+            }
+            input{
+                margin: 5px;
+                height: 20px;
+                line-height: 20px;
+            }
+            textarea{
+                width: 80%;
+                height: 80px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="menu">
+            <b>Size</b><br/>
+            Column:<input type="number" id="w" value="3" />
+            Rows:<input type="number" id="h" value="3" /> 
+            Cards:<input type="number" id="c" value="50" /><br/>
+            Row height: <input type="number" id="hs" value="100" /> 
+            Space between cards: <input type="number" id="cm" value="20" />
+            Number of cards pr page: <input type="number" id="cpp" value="3" />
+            <br/>
+            Words:<br/>
+            <textarea id="words">Hest, Ko, Får, Gris, Lama, Mink, Håne, Lam, Kylling, Tyr, Æsel</textarea><br/>
+            <button onClick="update()">Update</button>
+            <div id="info"></div>
+        </div>
+        <div id="out"></div>
+        <script>
+            const e = (id)=>document.getElementById(id);
+            const log = (msg) => e("info").innerHTML += "<br/>"+msg
+            const resetLog = (msg) => e("info").innerHTML=""
+            function update(){
+                resetLog()
+                let w = parseInt( e('w').value )
+                let h = parseInt( e('h').value )
+                let hs = parseInt( e('hs').value )
+                let cards = parseInt( e('c').value )
+                let cm = parseInt( e('cm').value )
+                let cpp = parseInt( e('cpp').value )
+                let words = e('words').value
+                words = words.split(',').map(s=>s.trim()).filter(s=>s.length>0)
+                let countUses = {}
+                const cellPerCard = w*h
+                const totalCells = cellPerCard*cards;
+                const wordAppearing = Math.ceil(totalCells/words.length);
+                log(`Generating ${cards} cards..`)
+                log(`Words needed: ${cards*cellPerCard}`)
+                if(words.length < cellPerCard){
+                    log(`There most be at enough words to fill a card! (Number of words: ${words.length}, words pr card: ${cellPerCard})`)
+                    return
+                }
+                let info = '';
+                // list off all each (x of the same word for each time it should appear)
+                let allWordsArray = words.map(word=> new Array(wordAppearing).fill(word));
+                //log(`allWordsArray: ${allWordsArray.flat().join(",")}`)
+                log(`Each word is created ${wordAppearing} times (${words.length} words), with a total of ${wordAppearing*words.length} across all cards `)
+                // add words to each card (a word can only be once at one card)
+                let cards_words = []
+                for(let card_i = 0; card_i<cards; card_i++){
+                    cards_words[card_i] = []
+                    for(let word_i = 0; word_i <cellPerCard; word_i++){
+                        let nextWord, ran, max_run = 100_000
+                        let listWithMostWords
+                        do{
+                            let mostWordLeft = allWordsArray.reduce((c,n,i)=>(n.length>c ? n.length:c),0)
+                            listWithMostWords = allWordsArray.filter(list=>list.length === mostWordLeft);
+                            ran = Math.floor(Math.random()*listWithMostWords.length) // word array
+                            nextWord = listWithMostWords[ran][0];
+                            if(max_run--<0) {
+                                log(`Something when wrong while adding words to card:`)
+                                log(`Not able to distribute words!`)
+                                return
+                            } 
+                        }
+                        while(cards_words[card_i].includes(nextWord))
+                        cards_words[card_i].push(nextWord) // add word to card
+                        var listWithWord = allWordsArray.find(list=>list[0]===nextWord);
+                        listWithWord.pop() // remove word
+                    }
+
+                }
+                // Print to html:
+                let out = "", atCard = 0, pageCount = 0;
+                for (let c = 0; c < cards; c++) {
+                    if (pageCount === 0){
+                        out+="<div class='page'>"
+                    }
+                    out+="<div class='card' style='margin-bottom:"+cm+"px'>"
+                    let wordForThisCard = cards_words[atCard], atWord = 0
+                    for (let y = 0; y < h; y++) {
+                        out+="<div class='row'>"
+                        for (let x = 0; x < w; x++) {
+                            let word = wordForThisCard[atWord]
+                            if(!countUses[word]) countUses[word] = 1
+                            else countUses[word] += 1
+                            atWord++
+                            out+="<div class='cell' style='width:"+(100/w)+"%;height:"+hs+"px'>"+word+"</div>"
+                        }
+                        out+="</div>"
+                    }
+                    out+="</div>"
+                    if (pageCount === cpp-1){
+                        out+="</div>"
+                        pageCount = 0;
+                    }else{
+                        pageCount++;
+                    }
+                    atCard++;
+                }
+                if (pageCount !== 0){
+                    out+="</div>"
+                }
+
+                log("Final word usage: "+Object.entries(countUses).map(item=>`${item[0]}: ${item[1]}`).join(", "))
+                log("Done: <a href='#' onClick='window.print()'>Print</a> <i>(Header and info is hidden on the print)</i>")
+
+                e("out").innerHTML = out
+            }
+        </script>
+    </body>
+</html>

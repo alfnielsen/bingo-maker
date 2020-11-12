@@ -157,7 +157,7 @@
                 }
 
                 log("Final word usage: "+Object.entries(countUses).map(item=>`${item[0]}: ${item[1]}`).join(", "))
-                log("Done: <a href='#' onClick='window.print()'>Print</a> <i>(Header and info is hidden on the print)</i>")
+                log("Done: <a href='javascript:void();' onClick='window.print()'>Print</a> <i>(Header and info is hidden on the print)</i>")
 
                 e("out").innerHTML = out
             }
